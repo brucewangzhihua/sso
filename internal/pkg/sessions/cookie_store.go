@@ -130,6 +130,7 @@ func (s *CookieStore) GetCSRF(req *http.Request) (*http.Cookie, error) {
 
 // ClearSession clears the session cookie from a request
 func (s *CookieStore) ClearSession(rw http.ResponseWriter, req *http.Request) {
+	http.SetCookie(rw, s.makeCookie(req, fmt.Sprintf(".%s", s.Name), "", time.Hour*-1, time.Now()))
 	http.SetCookie(rw, s.makeSessionCookie(req, "", time.Hour*-1, time.Now()))
 }
 
