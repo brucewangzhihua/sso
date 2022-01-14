@@ -82,22 +82,19 @@ func NewCookieStore(cookieName string, optFuncs ...func(*CookieStore) error) (*C
 func (s *CookieStore) makeCookie(req *http.Request, name string, value string, expiration time.Duration, now time.Time, setDomainWildcard bool) *http.Cookie {
 	logger := log.NewLogEntry()
 	domain := ""
-	if setDomainWildcard {
+	if setDomainWildcard || s.CookieDomain != "" {
 		domain = req.Host
 		if h, _, err := net.SplitHostPort(domain); err == nil {
 			domain = h
 		}
+		if s.CookieDomain != "" {
+			if !strings.HasSuffix(domain, s.CookieDomain) {
+				logger.WithRequestHost(domain).WithCookieDomain(s.CookieDomain).Warn("Warning: Using explicitly configured cookie domain.")
+			}
+			domain = s.CookieDomain
+		}
 	}
 
-	if s.CookieDomain != "" {
-		domain := req.Host
-		if h, _, err := net.SplitHostPort(domain); err == nil {
-			domain = h
-		}
-		if !strings.HasSuffix(domain, s.CookieDomain) {
-			logger.WithRequestHost(domain).WithCookieDomain(s.CookieDomain).Warn("Warning: Using explicitly configured cookie domain.")
-		}
-	}
 	if len(value) != 0 {
 		logger.Warn(fmt.Sprintf("DEBUG: Making cookie with name: %q, and domain: %q", name, domain))
 	} else {
@@ -108,7 +105,7 @@ func (s *CookieStore) makeCookie(req *http.Request, name string, value string, e
 		Name:     name,
 		Value:    value,
 		Path:     "/",
-		Domain:   s.CookieDomain,
+		Domain:   domain,
 		HttpOnly: s.CookieHTTPOnly,
 		Secure:   s.CookieSecure,
 		Expires:  now.Add(expiration),
